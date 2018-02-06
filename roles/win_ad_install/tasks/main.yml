@@ -1,0 +1,36 @@
+---
+# tasks file for win_ad_install
+- name: Install AD-Domain-Services
+  win_feature:
+   name: AD-Domain-Services
+   state: present
+
+# Install DNS Server
+# ensure the named domain is reachable from the target host; if not, create the domain in a new forest residing on the target host
+- win_domain:
+    dns_domain_name: "{{ ad_domain_name }}"
+    safe_mode_password: "{{ ad_safe_mode_password }}"
+
+# ensure a server is a domain controller
+- name: Ensure a Server is a domain Controller  
+  win_domain_controller:
+      dns_domain_name: "{{ ad_domain_name }}"
+      domain_admin_user: "{{ ad_admin_user }}"
+      domain_admin_password: "{{ ad_admin_password }}"
+      safe_mode_password: "{{ ad_safe_mode_password }}"
+      state: domain_controller
+      log_path: c:\ansible_win_domain_controller.txt
+  tags:
+     - domaincntrl
+
+# Unconditionally reboot the machine with all defaults
+- win_reboot:
+  tags: 
+    - reboot
+
+- name: List DCs in domain
+  win_shell: "nltest /dclist:{{ ad_domain_name }}"
+  register: domain_list
+
+- debug:
+  var: domain_list
